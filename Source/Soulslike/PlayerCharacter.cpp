@@ -23,8 +23,7 @@ APlayerCharacter::APlayerCharacter()
 	Camera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 	Camera->bUsePawnControlRotation = false;
 
-	BaseTurnRate = 50.0f;
-	BaseLookUpRate = 50.0f;
+	BaseRollDistance = 120.0f;
 
 	bUseControllerRotationYaw = false;
 	bUseControllerRotationPitch = false;
@@ -49,6 +48,11 @@ void APlayerCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	if (bIsRolling)
+	{
+		FVector NewLocation = GetActorLocation() + (RollDirection * BaseRollDistance);
+		SetActorLocation(FMath::VInterpTo(GetActorLocation(), NewLocation, DeltaTime, 5.0f));
+	}
 }
 
 // Called to bind functionality to input
@@ -70,9 +74,22 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 	PlayerInputComponent->BindAction("RightHeavyAttack", IE_Pressed, this, &APlayerCharacter::RightHeavyAttack);
 }
 
+bool APlayerCharacter::CanMove(float value)
+{
+	return	!bIsAttacking &&
+			!bIsRolling &&
+			value != 0.0f;
+}
+
+bool APlayerCharacter::CanAction()
+{
+	return	!bIsAttacking &&
+			!bIsRolling;
+}
+
 void APlayerCharacter::MoveForward(float value)
 {
-	if (!bIsAttacking && !bIsRolling)
+	if (CanMove(value))
 	{
 		const FRotator Rotation = Controller->GetControlRotation();
 		const FRotator YawRotation = FRotator(0.0f, Rotation.Yaw, 0.0f);
@@ -84,7 +101,7 @@ void APlayerCharacter::MoveForward(float value)
 
 void APlayerCharacter::MoveRight(float value)
 {
-	if (!bIsAttacking && !bIsRolling)
+	if (CanMove(value))
 	{
 		const FRotator Rotation = Controller->GetControlRotation();
 		const FRotator YawRotation = FRotator(0.0f, Rotation.Yaw, 0.0f);
@@ -106,7 +123,7 @@ void APlayerCharacter::LookUp(float value)
 
 void APlayerCharacter::LeftLightAttack()
 {
-	if (!bIsAttacking && !bIsRolling)
+	if (CanAction())
 	{
 		bIsAttacking = true;
 
@@ -121,7 +138,7 @@ void APlayerCharacter::LeftLightAttack()
 
 void APlayerCharacter::LeftHeavyAttack()
 {
-	if (!bIsAttacking && !bIsRolling)
+	if (CanAction())
 	{
 		bIsAttacking = true;
 
@@ -136,7 +153,7 @@ void APlayerCharacter::LeftHeavyAttack()
 
 void APlayerCharacter::RightLightAttack()
 {
-	if (!bIsAttacking && !bIsRolling)
+	if (CanAction())
 	{
 		bIsAttacking = true;
 
@@ -151,7 +168,7 @@ void APlayerCharacter::RightLightAttack()
 
 void APlayerCharacter::RightHeavyAttack()
 {
-	if (!bIsAttacking && !bIsRolling)
+	if (CanAction())
 	{
 		bIsAttacking = true;
 
@@ -171,18 +188,17 @@ void APlayerCharacter::AttackEnd()
 
 void APlayerCharacter::Roll()
 {
-	UE_LOG(LogTemp, Warning, TEXT("Roll_1"))
-
-	if (!bIsRolling && !bIsAttacking)
+	if (CanAction())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Roll_2"))
 		bIsRolling = true;
 
 		UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 		if (AnimInstance && CombatMontage)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("Roll_3"))
-			AnimInstance->Montage_Play(CombatMontage, 1.0f);
+			RollDirection = GetActorForwardVector();
+			RollCurrentLocation = GetActorLocation();
+
+			AnimInstance->Montage_Play(CombatMontage, 2.0f);
 			AnimInstance->Montage_JumpToSection(FName("Roll"));
 		}
 	}

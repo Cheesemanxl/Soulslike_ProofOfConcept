@@ -29,8 +29,11 @@ protected:
 	virtual void BeginPlay() override;
 
 public:
-	float BaseTurnRate;
-	float BaseLookUpRate;
+	FVector RollDirection;
+	FVector RollCurrentLocation;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rolling")
+	float BaseRollDistance;
 
 	bool bIsAttacking;
 	bool bIsRolling;
@@ -47,6 +50,9 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void RollEnd();
+
+	bool CanMove(float value);
+	bool CanAction();
 
 	void MoveForward(float value);
 	void MoveRight(float value);
